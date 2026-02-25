@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/detail",
+      "destination": "/api/detail"
+    },
+    {
+      "source": "/movies/:id",
+      "destination": "/detail.html?id=:id&type=movie"
+    },
+    {
+      "source": "/tv/:id",
+      "destination": "/detail.html?id=:id&type=tv"
+    }
+  ]
+}

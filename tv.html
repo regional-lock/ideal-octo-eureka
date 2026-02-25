@@ -541,7 +541,7 @@
                         </div>
                     </div>
                 `;
-                card.onclick = () => window.location.href = `detail.html?id=${m.id}&type=${type}&slug=${toSlug(m.title || m.name)}`;
+                card.onclick = () => window.location.href = `/detail?id=${m.id}&type=${type}&slug=${toSlug(m.title || m.name)}`;
                 navSearchResults.appendChild(card);
             });
         }
@@ -570,7 +570,7 @@
                             </div>
                         </div>
                     `;
-                    card.onclick = () => window.location.href = `detail.html?id=${m.id}&type=tv&slug=${toSlug(m.name)}`;
+                    card.onclick = () => window.location.href = `/detail?id=${m.id}&type=tv&slug=${toSlug(m.name)}`;
                     grid.appendChild(card);
                 });
                 document.getElementById('pageIndicator').innerText = `Page ${currentPage}`;

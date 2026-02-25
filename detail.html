@@ -968,7 +968,7 @@
                             <span class="rating-val">★ ${(m.vote_average || 0).toFixed(1)}</span>
                         </div>
                     </div>`;
-                card.onclick = () => window.location.href = `detail.html?id=${m.id}&type=${type}&slug=${toSlug(m.title || m.name)}`;
+                card.onclick = () => window.location.href = `/detail?id=${m.id}&type=${type}&slug=${toSlug(m.title || m.name)}`;
                 navSearchResults.appendChild(card);
             });
         }
@@ -1129,7 +1129,7 @@
                         const rType = item.media_type || (item.title ? 'movie' : 'tv');
                         const rYear = (item.release_date || item.first_air_date || '').split('-')[0] || 'N/A';
                         return `
-                        <div class="card" onclick="window.location.href='detail.html?id=${item.id}&type=${rType}&slug=${toSlug(item.title || item.name)}'">
+                        <div class="card" onclick="window.location.href='/detail?id=${item.id}&type=${rType}&slug=${toSlug(item.title || item.name)}'">
                             <div class="media-badge ${rType === 'movie' ? 'badge-movie' : 'badge-series'}">${rType}</div>
                             <img src="${IMG + item.poster_path}" loading="lazy">
                             <div class="card-meta">

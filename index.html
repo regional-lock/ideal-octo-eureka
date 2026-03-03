@@ -700,14 +700,7 @@
                         </button>
                         <div class="filter-options" id="platformOptions" style="display: none;">
                             <div class="filter-option" data-platform="">All Platforms</div>
-                            <div class="filter-option" data-platform="8">Netflix</div>
-                            <div class="filter-option" data-platform="119">Amazon Prime</div>
-                            <div class="filter-option" data-platform="337">Disney+</div>
-                            <div class="filter-option" data-platform="384">HBO Max</div>
-                            <div class="filter-option" data-platform="15">Hulu</div>
-                            <div class="filter-option" data-platform="350">Apple TV+</div>
-                            <div class="filter-option" data-platform="531">Paramount+</div>
-                            <div class="filter-option" data-platform="29">Crunchyroll</div>
+                            <!-- Populated dynamically by JS -->
                         </div>
                     </div>
 
@@ -727,6 +720,21 @@
                         </div>
                     </div>
 
+                    <!-- Country Filter -->
+                    <div class="filter-dropdown">
+                        <button class="filter-btn" id="countryBtn">
+                            <span id="countryLabel">Country</span>
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"
+                                style="margin-left: 8px;">
+                                <path d="M6 9L1 4h10z" />
+                            </svg>
+                        </button>
+                        <div class="filter-options" id="countryOptions" style="display: none;">
+                            <div class="filter-option" data-country="">All Countries</div>
+                            <!-- Populated dynamically by JS -->
+                        </div>
+                    </div>
+
                     <!-- Clear Filters Button -->
                     <button class="clear-filters-btn" id="clearFiltersBtn" style="display: none;">
                         Clear Filters
@@ -735,20 +743,21 @@
             </div>
         </header>
 
-        <div
-            style="display: flex; justify-content: space-between; align-items: baseline; border-left: 3px solid var(--accent); padding-left: 15px; margin-bottom: 30px;">
-            <h2 id="dynamicLabel"
-                style="margin:0; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; color: var(--text);">
-                Results</h2>
-            <span id="totalCountDisplay" style="color: var(--sub-text); font-size: 0.9rem;"></span>
-        </div>
-        <div id="dynamicGrid" class="movie-grid"></div>
-        <div class="pagination">
-            <button class="pg-btn" id="prevBtn" onclick="changePage(-1)">Previous</button>
-            <span id="pageIndicator"
-                style="font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 1px;">Page 1</span>
-            <button class="pg-btn" id="nextBtn" onclick="changePage(1)">Next</button>
-        </div>
+        <div id="dynamicSection" style="display: none;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: baseline; border-left: 3px solid var(--accent); padding-left: 15px; margin-bottom: 30px;">
+                <h2 id="dynamicLabel"
+                    style="margin:0; font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; color: var(--text);">
+                    Results</h2>
+                <span id="totalCountDisplay" style="color: var(--sub-text); font-size: 0.9rem;"></span>
+            </div>
+            <div id="dynamicGrid" class="movie-grid"></div>
+            <div class="pagination">
+                <button class="pg-btn" id="prevBtn" onclick="changePage(-1)">Previous</button>
+                <span id="pageIndicator"
+                    style="font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 1px;">Page 1</span>
+                <button class="pg-btn" id="nextBtn" onclick="changePage(1)">Next</button>
+            </div>
         </div>
 
         <div id="defaultContent">
@@ -789,7 +798,7 @@
 
         // State Global
         let currentType = 'search', currentQuery = '', currentPage = 1, currentGenreId = '';
-        let selectedGenre = '', selectedPlatform = '', selectedMediaType = '';
+        let selectedGenre = '', selectedPlatform = '', selectedMediaType = '', selectedCountry = '';
 
         window.onload = () => {
             // 1. Update angka watchlist di navbar saat pertama kali buka
@@ -823,7 +832,70 @@
 
             // 4. Setup Filter Dropdowns
             setupFilterDropdowns();
+            populateCountryDropdown();
+            populatePlatformDropdown();
         };
+
+        // --- FETCH COUNTRIES ---
+        async function populateCountryDropdown() {
+            try {
+                const res = await fetch(`https://api.themoviedb.org/3/watch/providers/regions?api_key=${API_KEY}`);
+                const data = await res.json();
+
+                // Sort countries alphabetically by native_name or english_name
+                const regions = data.results.sort((a, b) => a.english_name.localeCompare(b.english_name));
+
+                const countryOptions = document.getElementById('countryOptions');
+                // Keep the "All Countries" option
+                countryOptions.innerHTML = '<div class="filter-option" data-country="">All Countries</div>';
+
+                regions.forEach(region => {
+                    const div = document.createElement('div');
+                    div.className = 'filter-option';
+                    div.setAttribute('data-country', region.iso_3166_1);
+                    div.textContent = region.english_name;
+                    countryOptions.appendChild(div);
+                });
+
+                // Attach click listeners to the new dynamic options is handled below
+            } catch (err) {
+                console.error("Failed to fetch regions:", err);
+            }
+        }
+
+        async function populatePlatformDropdown() {
+            try {
+                // Fetching platforms. TMDB returns them sorted by priority. We'll take the top 50 to avoid a massive list.
+                const res = await fetch(`https://api.themoviedb.org/3/watch/providers/movie?api_key=${API_KEY}`);
+                const data = await res.json();
+
+                // Take top 50 platforms, remove duplicates by ID, then sort alphabetically
+                const uniqueProviders = [];
+                const seen = new Set();
+                for (let p of data.results) {
+                    if (!seen.has(p.provider_name) && uniqueProviders.length < 50) {
+                        seen.add(p.provider_name);
+                        uniqueProviders.push(p);
+                    }
+                }
+
+                const sortedProviders = uniqueProviders.sort((a, b) => a.provider_name.localeCompare(b.provider_name));
+                const platformOptions = document.getElementById('platformOptions');
+
+                platformOptions.innerHTML = '<div class="filter-option" data-platform="">All Platforms</div>';
+
+                sortedProviders.forEach(provider => {
+                    const div = document.createElement('div');
+                    div.className = 'filter-option';
+                    div.setAttribute('data-platform', provider.provider_id);
+                    div.textContent = provider.provider_name;
+                    platformOptions.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error("Failed to fetch platforms:", err);
+            }
+        }
 
         // --- FUNGSI NAVBAR COUNTER ---
         function updateNavCounter() {
@@ -856,7 +928,7 @@
             currentQuery = q;
 
             // Check if we have any active filters or search query
-            const hasFilters = selectedGenre || selectedPlatform || selectedMediaType;
+            const hasFilters = selectedGenre || selectedPlatform || selectedMediaType || selectedCountry;
             const hasQuery = currentQuery.length > 2;
 
             if (hasQuery || hasFilters) {
@@ -874,6 +946,10 @@
                 if (selectedMediaType) {
                     const typeText = selectedMediaType === 'movie' ? 'Movies' : 'Series';
                     labelParts.push(`Type: ${typeText}`);
+                }
+                if (selectedCountry) {
+                    const countryEl = document.querySelector(`[data-country="${selectedCountry}"]`);
+                    if (countryEl) labelParts.push(`Country: ${countryEl.textContent}`);
                 }
 
                 document.getElementById('dynamicLabel').innerText = labelParts.join(' | ') || 'Results';
@@ -905,6 +981,7 @@
                 genreOptions.style.display = genreOptions.style.display === 'none' ? 'block' : 'none';
                 document.getElementById('platformOptions').style.display = 'none';
                 document.getElementById('typeOptions').style.display = 'none';
+                document.getElementById('countryOptions').style.display = 'none';
             });
 
             document.querySelectorAll('#genreOptions .filter-option').forEach(option => {
@@ -929,19 +1006,21 @@
                 platformOptions.style.display = platformOptions.style.display === 'none' ? 'block' : 'none';
                 document.getElementById('genreOptions').style.display = 'none';
                 document.getElementById('typeOptions').style.display = 'none';
+                document.getElementById('countryOptions').style.display = 'none';
             });
 
-            document.querySelectorAll('#platformOptions .filter-option').forEach(option => {
-                option.addEventListener('click', () => {
-                    selectedPlatform = option.getAttribute('data-platform');
-                    document.querySelectorAll('#platformOptions .filter-option').forEach(o => o.classList.remove('selected'));
-                    option.classList.add('selected');
-                    document.getElementById('platformLabel').textContent = option.textContent;
-                    platformBtn.classList.toggle('active', selectedPlatform !== '');
-                    platformOptions.style.display = 'none';
-                    updateClearButton();
-                    triggerSearch(currentQuery);
-                });
+            document.getElementById('platformOptions').addEventListener('click', (e) => {
+                const option = e.target.closest('.filter-option');
+                if (!option) return;
+
+                selectedPlatform = option.getAttribute('data-platform');
+                document.querySelectorAll('#platformOptions .filter-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                document.getElementById('platformLabel').textContent = option.textContent;
+                platformBtn.classList.toggle('active', selectedPlatform !== '');
+                platformOptions.style.display = 'none';
+                updateClearButton();
+                triggerSearch(currentQuery);
             });
 
             // Type dropdown
@@ -953,6 +1032,7 @@
                 typeOptions.style.display = typeOptions.style.display === 'none' ? 'block' : 'none';
                 document.getElementById('genreOptions').style.display = 'none';
                 document.getElementById('platformOptions').style.display = 'none';
+                document.getElementById('countryOptions').style.display = 'none';
             });
 
             document.querySelectorAll('#typeOptions .filter-option').forEach(option => {
@@ -968,14 +1048,42 @@
                 });
             });
 
+            // Country dropdown
+            const countryBtn = document.getElementById('countryBtn');
+            const countryOptions = document.getElementById('countryOptions');
+
+            countryBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                countryOptions.style.display = countryOptions.style.display === 'none' ? 'block' : 'none';
+                document.getElementById('genreOptions').style.display = 'none';
+                document.getElementById('platformOptions').style.display = 'none';
+                document.getElementById('typeOptions').style.display = 'none';
+            });
+
+            document.getElementById('countryOptions').addEventListener('click', (e) => {
+                const option = e.target.closest('.filter-option');
+                if (!option) return;
+
+                selectedCountry = option.getAttribute('data-country');
+                document.querySelectorAll('#countryOptions .filter-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                document.getElementById('countryLabel').textContent = option.textContent;
+                countryBtn.classList.toggle('active', selectedCountry !== '');
+                countryOptions.style.display = 'none';
+                updateClearButton();
+                triggerSearch(currentQuery);
+            });
+
             // Clear filters button
             document.getElementById('clearFiltersBtn').addEventListener('click', () => {
                 selectedGenre = '';
                 selectedPlatform = '';
                 selectedMediaType = '';
+                selectedCountry = '';
                 document.getElementById('genreLabel').textContent = 'Genre';
                 document.getElementById('platformLabel').textContent = 'Platform';
                 document.getElementById('typeLabel').textContent = 'Type';
+                document.getElementById('countryLabel').textContent = 'Country';
                 document.querySelectorAll('.filter-option').forEach(o => o.classList.remove('selected'));
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 updateClearButton();
@@ -987,11 +1095,12 @@
                 document.getElementById('genreOptions').style.display = 'none';
                 document.getElementById('platformOptions').style.display = 'none';
                 document.getElementById('typeOptions').style.display = 'none';
+                document.getElementById('countryOptions').style.display = 'none';
             });
         }
 
         function updateClearButton() {
-            const hasFilters = selectedGenre || selectedPlatform || selectedMediaType;
+            const hasFilters = selectedGenre || selectedPlatform || selectedMediaType || selectedCountry;
             document.getElementById('clearFiltersBtn').style.display = hasFilters ? 'block' : 'none';
         }
 
@@ -1009,12 +1118,14 @@
                 if (currentQuery.length > 2) {
                     // Use search API
                     baseUrl = `https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(currentQuery)}`;
-                } else if (selectedGenre || selectedPlatform || selectedMediaType) {
+                } else if (selectedGenre || selectedPlatform || selectedMediaType || selectedCountry) {
                     // Use discover API
                     const mediaType = selectedMediaType || 'movie';
                     baseUrl = `https://api.themoviedb.org/3/discover/${mediaType}?api_key=${API_KEY}`;
                     if (selectedGenre) baseUrl += `&with_genres=${selectedGenre}`;
-                    if (selectedPlatform) baseUrl += `&with_watch_providers=${selectedPlatform}&watch_region=US`;
+                    const watchRegion = selectedCountry || 'US';
+                    if (selectedPlatform) baseUrl += `&with_watch_providers=${selectedPlatform}&watch_region=${watchRegion}`;
+                    if (selectedCountry) baseUrl += `&with_origin_country=${selectedCountry}`;
                 } else {
                     return;
                 }
